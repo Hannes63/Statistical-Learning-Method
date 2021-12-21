@@ -1,15 +1,16 @@
 
 import numpy as np
-import csv
 
 
-def random_generate_data(file_path):
-    data = np.random.rand(10, 10)
+def random_generate_data(file_path, x, y):
+    data = np.random.randint(0, 100, (x, y))
     with open(file_path, 'w') as f:
-        print('start writing...')
-        writer = csv.writer(f)
-        writer.writerows(data)
+        print('start writing {}...'.format(file_path))
+        np.savetxt(file_path, data, delimiter=',', fmt='%d')
         print('finish writing')
 
 
-random_generate_data('data_set/mnist_train.csv')
+random_generate_data('../data_set/rand_train.csv', 160000, 3)
+random_generate_data('../data_set/rand_test.csv', 10000, 3)
+
+
