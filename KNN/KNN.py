@@ -1,13 +1,10 @@
 import numpy as np
 from utils.statistics import median
-from utils import heap
+from utils.heap import PriorityQueue
 from time import time
 
 
 class KDTree:
-    c1 = 0
-    c2 = 0
-
     def __init__(self, X, y, dim):
         """
         Information of a kd-tree node, and kd-tree operation functions.
@@ -38,14 +35,11 @@ class KDTree:
         if X.size <= 0:
             return None
         num, dim = X.shape
-        s1 = time()
         mid = median(X, axis=axis, mod='upper')
-        KDTree.c1 += time() - s1
         mid_value = X[mid][axis]
         node = KDTree(X[mid], y[mid], axis)
         node.parent = parent
 
-        s2 = time()
         lX, ly, rX, ry = [], [], [], []
         for i in range(num):
             if X[i][axis] <= mid_value and i != mid:  # left subtree
@@ -55,16 +49,17 @@ class KDTree:
                 rX.append(X[i])
                 ry.append(y[i])
         lX, ly, rX, ry = np.array(lX), np.array(ly), np.array(rX), np.array(ry)
-        KDTree.c2 += time() - s2
 
         node.left = cls.construct_kd_tree(lX, ly, (axis + 1) % dim, node)
         node.right = cls.construct_kd_tree(rX, ry, (axis + 1) % dim, node)
         return node
 
     @classmethod
-    def k_nearest_neighbors(cls, node, X0, k):
+    def k_nearest_neighbors(cls, node, X0, k, L_const=2):
         """
         Find k nearest neighbors of input value in a kd-tree.
+        :param L_const: the constant of Lp distance, for example, when L_const=2, the algorithm uses
+        Euclidean distance.
         :param k: The number of nearest neighbors.
         :param node: root node of kd-tree.
         :param X0: array-like of shape (n_features, ), the input data point.
@@ -83,9 +78,9 @@ class KDTree:
             else:
                 son = node.right
             axis = (axis + 1) % dim
-        pq = heap.PriorityQueue('max')
+        pq = PriorityQueue('max')
 
-        # Used for priority queue
+        # Used for priority queue, Tup(a1, b1) < Tup(a2, b2) iff a1 < a2
         class Tup:
             def __init__(self, d, kdnode: KDTree):
                 self.d = d
@@ -97,8 +92,7 @@ class KDTree:
             def __lt__(self, other):
                 return self.d < other.d
 
-        # L2 distance without sqrt between input and the node nd
-        L_const = 2
+        # L2 distance without root between input and the node nd
         L2 = lambda nd: np.sum((nd.X - X0) ** L_const)
 
         def traversal(node):
@@ -144,13 +138,16 @@ class KDTree:
 
 
 class KNN:
-    def __init__(self, k_neighbors=1):
+    def __init__(self, k_neighbors=1, L_const=2):
         """
         Predict a sample by referring the k nearest neighbors, and making decision by majority.
         :param k_neighbors: the number of nearest neighbors
+        :param L_const: the constant of Lp distance, for example, when L_const=2, the algorithm uses
+        Euclidean distance.
         """
         self.k_neighbors = k_neighbors
         self.kd_root = None
+        self.L_const = L_const
 
     def fit(self, X, y):
         """
@@ -168,7 +165,7 @@ class KNN:
         :param X0: array-like of shape (n_features, )
         :return: the category of the input X0
         """
-        k_list = KDTree.k_nearest_neighbors(self.kd_root, X0, self.k_neighbors)
+        k_list = KDTree.k_nearest_neighbors(self.kd_root, X0, self.k_neighbors, self.L_const)
         vote = dict()
         for i in k_list:
             if i.y not in vote:
