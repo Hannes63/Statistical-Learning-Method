@@ -138,7 +138,7 @@ class KDTree:
 
 
 class KNN:
-    def __init__(self, k_neighbors=1, L_const=2):
+    def __init__(self, k_neighbors=5, L_const=2):
         """
         Predict a sample by referring the k nearest neighbors, and making decision by majority.
         :param k_neighbors: the number of nearest neighbors
